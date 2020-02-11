@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 
 def get_time_until_arrival():
+    # Stop id: place-mispk
     resp = requests.get('https://api-v3.mbta.com/predictions?filter[stop]=place-mispk')
     mbta = resp.json()['data']
     count=0
@@ -24,5 +25,7 @@ def get_time_until_arrival():
         count+=1
     return time_until_arrival
 
+if __name__ == "__main__":
+    get_time_until_arrival()
 
 print(get_time_until_arrival())
