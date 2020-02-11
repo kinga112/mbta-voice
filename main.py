@@ -1,15 +1,31 @@
 import requests
 import time
+from datetime import datetime
 
-def get_arrival_time():
+def get_time_until_arrival():
+    # Stop id: place-mispk
     resp = requests.get('https://api-v3.mbta.com/predictions?filter[stop]=place-mispk')
-    if resp.status_code != 200:
-        raise ApiError('GET /tasks/ {}'.format(resp.status_code))
-    
-    arrival_time = resp.json()['data'][1]['attributes']['arrival_time']
-    arrival_time = arrival_time.split('T')[1].split('-')[0]
-    return arrival_time
+    mbta = resp.json()['data']
+    count=0
+    while True:
+        direction = mbta[count]['attributes']['direction_id']
+        # 1 for East Bound, 0 for West Bound
+        if direction is 1:
+            arrival_time = mbta[count]['attributes']['arrival_time']
+            arrival_time = arrival_time.split('T')[1].split('-')[0]
+            now = time.strftime('%H:%M:%S')
+            now = datetime.strptime(now, '%H:%M:%S')
+            arrival_time = datetime.strptime(arrival_time, '%H:%M:%S')
+            time_until_arrival = arrival_time - now
+            time_until_arrival.seconds/60
+            if 'day' in str(time_until_arrival):
+                arrival_time = ''
+            else:
+                break
+        count+=1
+    return time_until_arrival
 
-timestamp = time.strftime('%H:%M:%S')
-print(timestamp)
-print(get_arrival_time())
+if __name__ == "__main__":
+    get_time_until_arrival()
+
+print(get_time_until_arrival())
