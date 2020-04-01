@@ -1,6 +1,9 @@
+import json
 import requests
 import time
+
 from datetime import datetime
+from flask import Flask
 
 
 def get_time_until_arrival():
@@ -11,7 +14,7 @@ def get_time_until_arrival():
     while True:
         direction = mbta[count]['attributes']['direction_id']
         # 1 for East Bound, 0 for West Bound
-        if direction is 1:
+        if direction == :
             # string of arrival time in full format
             arrival_time = mbta[count]['attributes']['arrival_time']
             # split string into only arrival time in 24 hour format
@@ -25,6 +28,10 @@ def get_time_until_arrival():
             # can subtract datetimes to get time until arrival
             time_until_arrival = arrival_time - now
             time_until_arrival.seconds/60
+            # split string to get minutes and seconds
+            time_until_arrival = f'{time_until_arrival}'
+            minutes = time_until_arrival[2:4]
+            seconds = time_until_arrival[5:7]
             # when train just arrives and leaves, it prints wierd
             # format of data that isnt useful so I ignore that one
             # and get time until next train
@@ -33,10 +40,42 @@ def get_time_until_arrival():
             else:
                 break
         count += 1
-    return time_until_arrival
+    return minutes, seconds
 
 
-if __name__ == "__main__":
-    get_time_until_arrival()
+app = Flask(__name__)
 
-print(get_time_until_arrival())
+
+@app.route("/", methods=['GET', 'POST', 'PUT'])
+def main():
+    seconds = get_time_until_arrival()[1]
+    minutes = get_time_until_arrival()[0]
+    # slice starting 0's out of string
+    if seconds[0] == '0':
+        seconds == seconds[1]
+    if minutes[0] == '0':
+        minutes = minutes[1]
+    if minutes == '0':
+        time_string = f'{seconds} seconds'
+    else:
+        time_string = f'{minutes} minutes and {seconds} seconds'
+    response = {
+        "expectUserResponse": False,
+        "finalResponse": {
+            "richResponse": {
+                "items": [
+                    {
+                        "simpleResponse": {
+                            'ssml': f'<speak>Next train in {time_string}?</speak>'
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+    response_text = json.dumps(response, indent=2, sort_keys=True)
+    return response_text, 200
+
+
+app.run()
