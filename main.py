@@ -5,8 +5,6 @@ import time
 from datetime import datetime
 from flask import Flask
 
-# from google.auth.transport import requests as google_requests
-
 
 def get_time_until_arrival():
     # Stop id: place-mispk
@@ -16,7 +14,7 @@ def get_time_until_arrival():
     while True:
         direction = mbta[count]['attributes']['direction_id']
         # 1 for East Bound, 0 for West Bound
-        if direction == 1:
+        if direction == 0:
             # string of arrival time in full format
             arrival_time = mbta[count]['attributes']['arrival_time']
             # split string into only arrival time in 24 hour format
@@ -30,6 +28,10 @@ def get_time_until_arrival():
             # can subtract datetimes to get time until arrival
             time_until_arrival = arrival_time - now
             time_until_arrival.seconds/60
+            # split string to get minutes and seconds
+            time_until_arrival = f'{time_until_arrival}'
+            minutes = time_until_arrival[2:4]
+            seconds = time_until_arrival[5:7]
             # when train just arrives and leaves, it prints wierd
             # format of data that isnt useful so I ignore that one
             # and get time until next train
@@ -38,17 +40,16 @@ def get_time_until_arrival():
             else:
                 break
         count += 1
-    return f'{time_until_arrival}'
+    return minutes, seconds
 
 
 app = Flask(__name__)
 
 
 @app.route("/", methods=['GET', 'POST', 'PUT'])
-def hello():
-    # time = f"{get_time_until_arrival()}"
-    # json = {'time': time}
-
+def main():
+    minutes = get_time_until_arrival()[0]
+    seconds = get_time_until_arrival()[1]
     response = {
         'expectUserResponse': True,
         'expectedInputs': [
@@ -59,7 +60,7 @@ def hello():
                         'items': [
                             {
                                 'simpleResponse': {
-                                    'ssml': f'<speak>Next train in {get_time_until_arrival()}?</speak>'
+                                    'ssml': f'<speak>Next train in {minutes} minutes and {seconds} seconds?</speak>'
                                     }
                                 }
                             ]
@@ -73,7 +74,3 @@ def hello():
 
 
 app.run()
-# if __name__ == "__main__":
-#     get_time_until_arrival()
-
-# print(get_time_until_arrival())
