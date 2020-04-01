@@ -1,6 +1,11 @@
+import json
 import requests
 import time
+
 from datetime import datetime
+from flask import Flask
+
+# from google.auth.transport import requests as google_requests
 
 
 def get_time_until_arrival():
@@ -11,7 +16,7 @@ def get_time_until_arrival():
     while True:
         direction = mbta[count]['attributes']['direction_id']
         # 1 for East Bound, 0 for West Bound
-        if direction is 1:
+        if direction == 1:
             # string of arrival time in full format
             arrival_time = mbta[count]['attributes']['arrival_time']
             # split string into only arrival time in 24 hour format
@@ -33,10 +38,42 @@ def get_time_until_arrival():
             else:
                 break
         count += 1
-    return time_until_arrival
+    return f'{time_until_arrival}'
 
 
-if __name__ == "__main__":
-    get_time_until_arrival()
+app = Flask(__name__)
 
-print(get_time_until_arrival())
+
+@app.route("/", methods=['GET', 'POST', 'PUT'])
+def hello():
+    # time = f"{get_time_until_arrival()}"
+    # json = {'time': time}
+
+    response = {
+        'expectUserResponse': True,
+        'expectedInputs': [
+            {
+                'possibleIntents': {'intent': 'actions.intent.TEXT'},
+                'inputPrompt': {
+                    'richInitialPrompt': {
+                        'items': [
+                            {
+                                'simpleResponse': {
+                                    'ssml': f'<speak>Next train in {get_time_until_arrival()}?</speak>'
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    response_text = json.dumps(response, indent=2, sort_keys=True)
+    return response_text, 200
+
+
+app.run()
+# if __name__ == "__main__":
+#     get_time_until_arrival()
+
+# print(get_time_until_arrival())
