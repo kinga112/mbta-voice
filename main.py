@@ -48,27 +48,32 @@ app = Flask(__name__)
 
 @app.route("/", methods=['GET', 'POST', 'PUT'])
 def main():
-    minutes = get_time_until_arrival()[0]
     seconds = get_time_until_arrival()[1]
+    minutes = get_time_until_arrival()[0]
+    # slice starting 0's out of string
+    if seconds[0] == '0':
+        seconds == seconds[1]
+    if minutes[0] == '0':
+        minutes = minutes[1]
+    if minutes == '0':
+        time_string = f'{seconds} seconds'
+    else:
+        time_string = f'{minutes} minutes and {seconds} seconds'
     response = {
-        'expectUserResponse': True,
-        'expectedInputs': [
-            {
-                'possibleIntents': {'intent': 'actions.intent.TEXT'},
-                'inputPrompt': {
-                    'richInitialPrompt': {
-                        'items': [
-                            {
-                                'simpleResponse': {
-                                    'ssml': f'<speak>Next train in {minutes} minutes and {seconds} seconds?</speak>'
-                                    }
-                                }
-                            ]
+        "expectUserResponse": False,
+        "finalResponse": {
+            "richResponse": {
+                "items": [
+                    {
+                        "simpleResponse": {
+                            'ssml': f'<speak>Next train in {time_string}?</speak>'
+                            }
                         }
-                    }
+                    ]
                 }
-            ]
+            }
         }
+
     response_text = json.dumps(response, indent=2, sort_keys=True)
     return response_text, 200
 
