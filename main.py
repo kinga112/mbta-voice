@@ -11,9 +11,11 @@ def get_time_until_arrival():
     resp = requests.get('https://api-v3.mbta.com/predictions?filter[stop]=place-mispk')
     mbta = resp.json()['data']
     count = 0
-    under_30sec = False
     running = True
+    under_1min = False
+
     while True:
+        # checks if MBTA is running if dict has info
         try:
             direction = mbta[count]['attributes']['direction_id']
         except:
@@ -21,8 +23,9 @@ def get_time_until_arrival():
             minutes = '00'
             seconds = '00'
             break
+
         # 1 for East Bound, 0 for West Bound
-        if direction == 0 and running is True:
+        if direction == 1 and running is True:
             # string of arrival time in full format
             arrival_time = mbta[count]['attributes']['arrival_time']
             # split string into only arrival time in 24 hour format
@@ -40,7 +43,6 @@ def get_time_until_arrival():
             time_until_arrival = f'{time_until_arrival}'
             minutes = time_until_arrival[2:4]
             seconds = time_until_arrival[5:7]
-            # print('sec after int', type(int(seconds)))
             # when train just arrives and leaves, it prints wierd
             # format of data that isnt useful so I ignore that one
             # and get time until next train
@@ -48,37 +50,36 @@ def get_time_until_arrival():
                 arrival_time = ''
             # sends next train if current one comes
             # in less than 30 seconds
-            elif int(minutes) == 0 and int(seconds) < 30:
-                print('seconds 0:', seconds[0])
-                under_30sec == True
-                arrival_time = ''
+            if int(minutes) < 1:
+                under_1min = True
             else:
                 break
         count += 1
-    return minutes, seconds, under_30sec, running
+    return minutes, seconds, running, under_1min
 
 
 app = Flask(__name__)
 
-@app.route("/", methods=['GET', 'POST', 'PUT'])
+@app.route("/", methods=['POST', 'GET'])
 def main():
     minutes = get_time_until_arrival()[0]
     seconds = get_time_until_arrival()[1]
-    under_30sec = get_time_until_arrival()[2]
-    running = get_time_until_arrival()[3]
+    running = get_time_until_arrival()[2]
+    under_1min = get_time_until_arrival()[3]
+    
     # slice starting 0's out of string
     if seconds[0] == '0':
         seconds = seconds[1]
     if minutes[0] == '0':
         minutes = minutes[1]
-    if minutes == '0':
-        time_string = f'Next train in {seconds} seconds'
-    if under_30sec is True:
-        time_string = f'Next train comes in less than 30 seconds. Following train coming in {minutes} minutes and {seconds} seconds'
+    
+    # Assistant answers accordingly
+    time_string = f'Next train arrives in {minutes} minutes and {seconds} seconds'
+    if under_1min is True:
+        time_string = f'Next train arrives in less than 1 minute. Following train arrives in {minutes} minutes and {seconds} seconds'
     if running is False:
-        time_string = f'MBTA is closed until the morning.'
-    else:
-        time_string = f'Next train in {minutes} minutes and {seconds} seconds'    
+        time_string = f'MBTA is closed until the morning'
+
     response = {
         "expectUserResponse": False,
         "finalResponse": {
@@ -86,7 +87,7 @@ def main():
                 "items": [
                     {
                         "simpleResponse": {
-                            'ssml': f'<speak>{time_string}!</speak>'
+                            'ssml': f'<speak>{time_string}</speak>'
                             }
                         }
                     ]
