@@ -11,10 +11,21 @@ def get_time_until_arrival():
     resp = requests.get('https://api-v3.mbta.com/predictions?filter[stop]=place-mispk')
     mbta = resp.json()['data']
     count = 0
+    running = True
+    under_1min = False
+
     while True:
-        direction = mbta[count]['attributes']['direction_id']
+        # checks if MBTA is running if dict has info
+        try:
+            direction = mbta[count]['attributes']['direction_id']
+        except:
+            running = False
+            minutes = '00'
+            seconds = '00'
+            break
+
         # 1 for East Bound, 0 for West Bound
-        if direction == 0:
+        if direction == 1 and running is True:
             # string of arrival time in full format
             arrival_time = mbta[count]['attributes']['arrival_time']
             # split string into only arrival time in 24 hour format
@@ -37,28 +48,38 @@ def get_time_until_arrival():
             # and get time until next train
             if 'day' in str(time_until_arrival):
                 arrival_time = ''
+            # sends next train if current one comes
+            # in less than 30 seconds
+            if int(minutes) < 1:
+                under_1min = True
             else:
                 break
         count += 1
-    return minutes, seconds
+    return minutes, seconds, running, under_1min
 
 
 app = Flask(__name__)
 
-
-@app.route("/", methods=['GET', 'POST', 'PUT'])
+@app.route("/", methods=['POST', 'GET'])
 def main():
-    seconds = get_time_until_arrival()[1]
     minutes = get_time_until_arrival()[0]
+    seconds = get_time_until_arrival()[1]
+    running = get_time_until_arrival()[2]
+    under_1min = get_time_until_arrival()[3]
+    
     # slice starting 0's out of string
     if seconds[0] == '0':
-        seconds == seconds[1]
+        seconds = seconds[1]
     if minutes[0] == '0':
         minutes = minutes[1]
-    if minutes == '0':
-        time_string = f'{seconds} seconds'
-    else:
-        time_string = f'{minutes} minutes and {seconds} seconds'
+    
+    # Assistant answers accordingly
+    time_string = f'Next train arrives in {minutes} minutes and {seconds} seconds'
+    if under_1min is True:
+        time_string = f'Next train arrives in less than 1 minute. Following train arrives in {minutes} minutes and {seconds} seconds'
+    if running is False:
+        time_string = f'MBTA is closed until the morning'
+
     response = {
         "expectUserResponse": False,
         "finalResponse": {
@@ -66,7 +87,7 @@ def main():
                 "items": [
                     {
                         "simpleResponse": {
-                            'ssml': f'<speak>Next train in {time_string}?</speak>'
+                            'ssml': f'<speak>{time_string}</speak>'
                             }
                         }
                     ]
